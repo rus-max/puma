@@ -1518,8 +1518,9 @@ module Puma
     # @example
     #   fork_worker
     #
-    def fork_worker(after_requests=1000)
+    def fork_worker(after_requests=1000, cycle=false)
       @options[:fork_worker] = Integer(after_requests)
+      @options[:fork_worker_cycle] = cycle
     end
 
     # When enabled, a worker that reaches the given request count stops serving
