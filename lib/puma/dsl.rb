@@ -1266,8 +1266,9 @@ module Puma
     # @note This is experimental.
     # @note Cluster mode only.
     #
-    def fork_worker(after_requests=1000)
+    def fork_worker(after_requests=1000, cycle=false)
       @options[:fork_worker] = Integer(after_requests)
+      @options[:fork_worker_cycle] = cycle
     end
 
     # The number of requests to attempt inline before sending a client back to
