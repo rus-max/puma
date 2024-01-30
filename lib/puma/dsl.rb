@@ -1319,8 +1319,9 @@ module Puma
     # @note This is experimental.
     # @note Cluster mode only.
     #
-    def fork_worker(after_requests=1000)
+    def fork_worker(after_requests=1000, cycle=false)
       @options[:fork_worker] = Integer(after_requests)
+      @options[:fork_worker_cycle] = cycle
     end
 
     # @deprecated Use {#max_keep_alive} instead.
