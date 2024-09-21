@@ -46,6 +46,8 @@ module Puma
       @original_argv = @argv.dup
       @config        = conf
 
+      env = launcher_args.delete(:env) || ENV
+
       @config.options[:log_writer] = @log_writer
 
       # Advertise the Configuration
@@ -62,7 +64,7 @@ module Puma
       # Load the systemd integration if we detect systemd's NOTIFY_SOCKET.
       # Skip this on JRuby though, because it is incompatible with the systemd
       # integration due to https://github.com/jruby/jruby/issues/6504
-      if ENV["NOTIFY_SOCKET"] && !Puma.jruby?
+      if ENV["NOTIFY_SOCKET"] && !Puma.jruby? && !ENV["PUMA_SKIP_SYSTEMD"]
         @config.plugins.create('systemd')
       end
 
@@ -105,7 +107,7 @@ module Puma
 
       @status = :run
 
-      log_config if ENV['PUMA_LOG_CONFIG']
+      log_config if env['PUMA_LOG_CONFIG']
     end
 
     attr_reader :binder, :log_writer, :events, :config, :options, :restart_dir
