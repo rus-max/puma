@@ -107,7 +107,7 @@ class TestPumaServerHijack < PumaTest
     echo_msg = "This should echo..."
     sock.syswrite echo_msg
 
-    assert_includes response.headers, 'connection: Upgrade'
+    assert_includes response, 'Connection: Upgrade'
     sock.wait_readable 0.2 # for TruffleRuby Errno::EAGAIN
     assert_equal echo_msg, sock.sysread(256)
   end
@@ -136,7 +136,7 @@ class TestPumaServerHijack < PumaTest
     echo_msg = "This should echo..."
     sock.syswrite echo_msg
 
-    assert_includes response.headers, 'connection: Upgrade'
+    assert_includes response, 'Connection: Upgrade'
     sock.wait_readable 0.2 # for TruffleRuby Errno::EAGAIN
     assert_equal echo_msg, sock.sysread(256)
   end
@@ -156,7 +156,7 @@ class TestPumaServerHijack < PumaTest
     # using sysread may only receive part of the response
     response = send_http_read_response "GET / HTTP/1.0\r\nConnection: close\r\n\r\n"
 
-    assert_equal "HTTP/1.0 200 OK\r\ncontent-length: 5\r\n\r\nabcde", response
+    assert_equal "HTTP/1.0 200 OK\r\nContent-Length: 5\r\n\r\nabcde", response
   end
 
   def test_partial_hijack_body_closes_body

@@ -508,10 +508,10 @@ module Puma
         if ary
           ary.each do |v|
             next if illegal_header_value?(v)
-            io_buffer.append key, colon, v, line_ending
+            io_buffer.append k, colon, v, line_ending
           end
         else
-          io_buffer.append key, colon, line_ending
+          io_buffer.append k, colon, line_ending
         end
       end
 
