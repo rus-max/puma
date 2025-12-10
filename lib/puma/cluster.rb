@@ -317,12 +317,17 @@ module Puma
 
         # Auto-fork after the specified number of requests.
         if (fork_requests = @options[:fork_worker].to_i) > 0
-          cycle = @options[:fork_worker_cycle] ? 1 : 0
-
-          @events.register(:ping!) do |w|
-            fork_worker! if w.index == 0 &&
-            (cycle == 0 ? w.phase == 0 : true) &&
-            w.last_status[:requests_count] >= fork_requests * ((1 + cycle) ** w.phase)
+          if @options[:fork_worker_cycle]
+            @events.register(:ping!) do |w|
+              fork_worker! if w.index == 0 &&
+                @workers.sum { |w| w.last_status[:requests_count] || 0 } >= fork_requests * (2 ** w.phase) * @options[:workers]
+            end
+          else
+            @events.register(:ping!) do |w|
+              fork_worker! if w.index == 0 &&
+                w.phase == 0 &&
+                w.last_status[:requests_count] >= fork_requests
+            end
           end
         end
       end
