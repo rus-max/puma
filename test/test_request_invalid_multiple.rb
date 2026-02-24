@@ -28,8 +28,8 @@ class TestRequestInvalidMultiple < PumaTest
   STATUS_CODES = ::Puma::HTTP_STATUS_CODES
 
   HEADERS_413 = [
-    "connection: close",
-    "content-length: #{STATUS_CODES[413].bytesize}"
+    "Connection: close",
+    "Content-Length: #{STATUS_CODES[413].bytesize}"
   ]
 
   ERROR_ON_CLOSED = [Errno::ECONNABORTED, Errno::ECONNRESET, Errno::EPIPE, EOFError]
@@ -97,7 +97,7 @@ class TestRequestInvalidMultiple < PumaTest
 
     if status >= 400
       if @server.leak_stack_on_error
-        cl = response.headers_hash['Content-Length'].to_i
+        cl = @response.headers_hash['Content-Length'].to_i
         refute_equal 0, cl, "Expected `content-length` header to be non-zero but was `#{cl}`. Headers: #{@response.headers_hash}"
       end
       socket.req_write GET_11
