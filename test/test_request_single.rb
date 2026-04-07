@@ -654,7 +654,7 @@ class TestRequestChunkedInvalid < TestRequestBase
 end
 
 # Tests invalid Transfer-Ecoding headers
-class TestTransferEncodingInvalid < TestRequestBase
+class TestRequestTransferEncodingInvalid < TestRequestBase
 
   def test_chunked_not_last
     te = [
@@ -724,5 +724,44 @@ class TestRequestReset < TestRequestBase
     assert @client.process_back_to_back_requests
     assert_equal '/next', @client.env[REQUEST_PATH]
     assert_nil @client.error_status_code
+  end
+end
+
+class TestRequestPeerip < TestRequestBase
+
+  def test_peerip_unmaps_ipv4_mapped_ipv6
+    peer_addr = -> () { ["AF_INET6", 80, "::ffff:127.0.0.1", "::ffff:127.0.0.1"] }
+    create_client("GET / HTTP/1.1\r\n\r\n") { |_client|
+      @rd.define_singleton_method(:peeraddr, peer_addr)
+    }
+
+    assert_equal "127.0.0.1", @client.peerip
+    assert_equal "127.0.0.1", @client.env["REMOTE_ADDR"]
+  end
+
+  def test_remote_addr_header_fallback_unmaps_ipv4_mapped_ipv6
+    peer_addr = -> () { ["AF_INET6", 80, "::ffff:10.1.2.3", "::ffff:10.1.2.3"] }
+    create_client("GET / HTTP/1.1\r\n\r\n") { |client|
+      @rd.define_singleton_method(:peeraddr, peer_addr)
+      client.remote_addr_header = "HTTP_X_REMOTE_IP"
+    }
+
+    assert_equal "10.1.2.3", @client.peerip
+    assert_equal "10.1.2.3", @client.env["REMOTE_ADDR"]
+  end
+
+  def test_peerip_preserves_plain_ipv4
+    create_client("GET / HTTP/1.1\r\n\r\n")
+
+    assert_equal "127.0.0.1", @client.peerip
+  end
+
+  def test_peerip_preserves_native_ipv6
+    peer_addr = -> () { ["AF_INET6", 80, "::1", "::1"] }
+    create_client("GET / HTTP/1.1\r\n\r\n") { |_client|
+      @rd.define_singleton_method(:peeraddr, peer_addr)
+    }
+
+    assert_equal "::1", @client.peerip
   end
 end

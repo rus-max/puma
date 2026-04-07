@@ -347,12 +347,12 @@ module Puma
       return @peerip if @peerip
 
       if @remote_addr_header
-        hdr = (@env[@remote_addr_header] || @io.peeraddr.last).split(/[\s,]/).first
+        hdr = (@env[@remote_addr_header] || socket_peerip).split(/[\s,]/).first
         @peerip = hdr
         return hdr
       end
 
-      @peerip ||= @io.peeraddr.last
+      @peerip ||= socket_peerip
     end
 
     def peer_family
@@ -386,6 +386,20 @@ module Puma
     end
 
     private
+
+    IPV4_MAPPED_IPV6_PREFIX = "::ffff:"
+    private_constant :IPV4_MAPPED_IPV6_PREFIX
+
+    def socket_peerip
+      unmap_ipv6(@io.peeraddr.last)
+    end
+
+    # Converts IPv4-mapped IPv6 addresses (e.g. ::ffff:127.0.0.1) back to
+    # their IPv4 form. These addresses appear when IPv4 clients connect to
+    # a dual-stack IPv6 socket.
+    def unmap_ipv6(addr)
+      addr.delete_prefix(IPV4_MAPPED_IPV6_PREFIX)
+    end
 
     # Checks the request `Transfer-Encoding` and/or `Content-Length` to see if
     # they are valid.  Raises errors if not, otherwise reads the body.
