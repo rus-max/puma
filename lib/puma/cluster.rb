@@ -178,6 +178,13 @@ module Puma
       @workers.all? { |w| w.phase == @phase }
     end
 
+    # Workers of the current phase are spawned and announce their boot one by
+    # one, so the phase alone does not mean the refork has completed.
+    def all_workers_booted_in_phase?
+      @workers.size >= @options[:workers] &&
+        @workers.all? { |w| w.phase == @phase && w.booted? }
+    end
+
     def all_workers_idle_timed_out?
       return false if @pending_phased_restart || @workers.empty?
 
@@ -363,12 +370,14 @@ module Puma
         end
 
         @events.register(:ping!) do |w|
-          threshold = @options[:mold_worker][@mold_threshold_index]
+          thresholds = @options[:mold_worker]
+          threshold = thresholds[@mold_threshold_index] ||
+            (thresholds.last if @options[:mold_worker_cycle])
           next unless threshold &&
             !w.mold? &&
             !@pending_phased_restart &&
             w.last_status[:requests_count] >= threshold &&
-            all_workers_in_phase?
+            all_workers_booted_in_phase?
 
           @mold_threshold_index += 1
           mold_worker!
