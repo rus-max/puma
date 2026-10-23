@@ -443,6 +443,54 @@ class TestIntegrationCluster < TestIntegration
     assert_empty phase1_pids & get_worker_pids(2)
   end
 
+  def test_mold_worker_cycle_repeats_last_threshold_and_retires_molds
+    hooks = Tempfile.new 'mold_hooks'
+    wrkrs = 2
+    cli_server "-w #{wrkrs} test/rackup/hello.ru", config: <<~CONFIG
+      worker_check_interval 1
+      mold_worker 10, cycle: true
+      after_mold_promotion { File.write '#{hooks.path}', "promoted\n", mode: 'a' }
+      before_mold_shutdown { File.write '#{hooks.path}', "shutdown\n", mode: 'a' }
+    CONFIG
+
+    get_worker_pids 0, wrkrs
+    send_requests_until_phase 3, wrkrs
+    mold_pids = @server_log.scan(/Promoting worker \d \(PID: (\d+)\) to mold/).flatten.map(&:to_i).first(3)
+
+    assert_equal 3, mold_pids.uniq.size
+    # Retired molds exit instead of piling up
+    mold_pids.first(2).each do |pid|
+      assert_raises(Errno::ESRCH) { 20.times { Process.kill(0, pid); sleep 0.1 } }
+    end
+    hook_calls = File.read(hooks.path).lines.tally
+    assert_operator hook_calls["promoted\n"], :>=, 3
+    assert_operator hook_calls["shutdown\n"], :>=, 2
+  end
+
+  def test_mold_worker_waits_for_all_workers_to_boot_before_promotion
+    cli_server "-w 2 test/rackup/hello.ru", config: <<~CONFIG
+      worker_check_interval 0.5
+      mold_worker 10, cycle: true
+      before_worker_boot { sleep 1 }
+    CONFIG
+
+    get_worker_pids 0, 2
+    send_requests_until_phase 3, 2
+
+    # The n-th promotion happens in phase n, after all of its workers booted
+    booted = Hash.new(0)
+    promotions = 0
+    @server_log.each_line do |line|
+      if (phase = line[/booted in [.0-9]+s, phase: (\d+)/, 1])
+        booted[phase.to_i] += 1
+      elsif line.include?("Promoting worker")
+        assert_equal 2, booted[promotions], "Promoted a mold in phase #{promotions} before all workers booted"
+        promotions += 1
+      end
+    end
+    assert_operator promotions, :>=, 3
+  end
+
   def test_mold_worker_ignores_mold_requests_for_threshold
     cli_server "-w #{workers} -t 1:1 test/rackup/hello.ru", config: <<~CONFIG
       worker_check_interval 0.5

@@ -510,6 +510,25 @@ class TestConfigFile < PumaTest
     assert_equal conf.options[:raise_exception_on_sigterm], true
   end
 
+  def test_mold_worker_cycle
+    conf = Puma::Configuration.new do |c|
+      c.mold_worker 10, 20, cycle: true
+    end
+    conf.clamp
+
+    assert_equal [10, 20], conf.options[:mold_worker]
+    assert conf.options[:mold_worker_cycle]
+  end
+
+  def test_mold_worker_cycle_disabled_by_default
+    conf = Puma::Configuration.new do |c|
+      c.mold_worker 10
+    end
+    conf.clamp
+
+    refute conf.options[:mold_worker_cycle]
+  end
+
   def test_mold_worker_and_fork_worker_from_separate_sources_raise
     conf = Puma::Configuration.new(config_files: ["test/config/fork_worker.rb"], mold_worker: [1000])
 

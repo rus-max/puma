@@ -1531,6 +1531,9 @@ module Puma
     # This option also enables the `refork` command (SIGURG), which promotes
     # the busiest worker to a new mold at any time.
     #
+    # With +cycle: true+, the last threshold repeats after all thresholds are
+    # used, so a new mold is promoted every time it is reached.
+    #
     # Incompatible with `fork_worker`.
     #
     # The default is +nil+.
@@ -1540,10 +1543,13 @@ module Puma
     #
     # @example
     #   mold_worker 1000, 2000, 4000
+    # @example
+    #   mold_worker 1000, 10_000, cycle: true
     #
-    def mold_worker(*thresholds)
+    def mold_worker(*thresholds, cycle: false)
       thresholds = [1000] if thresholds.empty?
       @options[:mold_worker] = thresholds.map { |t| Integer(t) }
+      @options[:mold_worker_cycle] = cycle
     end
 
     # @deprecated Use {#max_keep_alive} instead.
